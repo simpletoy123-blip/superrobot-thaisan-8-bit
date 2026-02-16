@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Super Robot Thaisan 8-Bit</title>
+<title>Super Robot Thaisan</title>
 <style>
 body{
     margin:0;
@@ -15,39 +15,130 @@ canvas{
     background:#111;
     border:3px solid white;
     margin-top:10px;
+    image-rendering: pixelated;
+}
+button{
+    font-size:18px;
+    margin:6px;
 }
 </style>
 </head>
 <body>
 
-<h2>SUPER ROBOT THAISAN 8-BIT</h2>
+<h2 id="titleText">SUPER ROBOT THAISAN</h2>
+<div id="menu"></div>
 <canvas id="game" width="512" height="384"></canvas>
 
 <script>
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const menuDiv = document.getElementById("menu");
+const titleText = document.getElementById("titleText");
 
 const TILE = 64;
 const MAP_W = 8;
 const MAP_H = 6;
 
-class Unit{
-    constructor(x,y,color){
-        this.x=x;
-        this.y=y;
-        this.color=color;
-    }
+let gameState = "title";
+let player = null;
+let enemy = {x:6,y:3,hp:100};
+let battleFlash = 0;
+
+/* ========= 8 BIT SPRITES ========= */
+
+function drawPlayerSprite(x,y,color){
+    ctx.fillStyle=color;
+    ctx.fillRect(x+20,y+10,24,24);
+    ctx.fillRect(x+28,y+0,8,10);
+    ctx.fillRect(x+10,y+18,10,10);
+    ctx.fillRect(x+44,y+18,10,10);
 }
 
-let units = [
-    new Unit(0,0,"cyan"),
-    new Unit(1,0,"yellow"),
-    new Unit(0,1,"lime"),
-    new Unit(1,1,"orange"),
-    new Unit(6,4,"red"),
-    new Unit(7,4,"red")
-];
+function drawEnemySprite(x,y){
+    ctx.fillStyle="red";
+    ctx.fillRect(x+20,y+10,24,24);
+    ctx.fillRect(x+28,y+0,8,10);
+    ctx.fillRect(x+10,y+18,10,10);
+    ctx.fillRect(x+44,y+18,10,10);
+}
+
+/* ========= TITLE SCREEN ========= */
+
+function showTitle(){
+    menuDiv.innerHTML = `
+        <button onclick="selectRobot('cyan')">Start - Alpha</button>
+        <button onclick="selectRobot('yellow')">Start - Beta</button>
+        <button onclick="selectRobot('lime')">Start - Gamma</button>
+        <button onclick="selectRobot('orange')">Start - Delta</button>
+    `;
+}
+
+function selectRobot(color){
+    player = {x:0,y:2,hp:100,color:color};
+    gameState = "game";
+    menuDiv.innerHTML="";
+    titleText.innerText="MISSION START";
+    render();
+}
+
+showTitle();
+
+/* ========= GAME ========= */
+
+canvas.addEventListener("click",function(e){
+    if(gameState !== "game") return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = Math.floor((e.clientX-rect.left)/TILE);
+    const my = Math.floor((e.clientY-rect.top)/TILE);
+
+    // Move
+    if(Math.abs(mx-player.x)+Math.abs(my-player.y) <= 2){
+        player.x = mx;
+        player.y = my;
+    }
+
+    // Attack if near enemy
+    if(Math.abs(player.x-enemy.x)+Math.abs(player.y-enemy.y) <= 1){
+        startBattle();
+    }
+
+    render();
+});
+
+/* ========= BATTLE ANIMATION ========= */
+
+function startBattle(){
+    gameState="battle";
+    battleFlash = 20;
+
+    let battleInterval = setInterval(()=>{
+        battleFlash--;
+        renderBattle();
+        if(battleFlash<=0){
+            clearInterval(battleInterval);
+            enemy.hp -= 30;
+            gameState="game";
+            render();
+        }
+    },50);
+}
+
+function renderBattle(){
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    if(battleFlash % 2 === 0){
+        ctx.fillStyle="white";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+
+    ctx.fillStyle="white";
+    ctx.font="24px monospace";
+    ctx.fillText("ATTACK!",200,180);
+}
+
+/* ========= RENDER ========= */
 
 function drawGrid(){
     for(let y=0;y<MAP_H;y++){
@@ -58,22 +149,19 @@ function drawGrid(){
     }
 }
 
-function drawUnits(){
-    units.forEach(u=>{
-        ctx.fillStyle=u.color;
-        ctx.fillRect(u.x*TILE+16,u.y*TILE+16,32,32);
-    });
-}
-
 function render(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     drawGrid();
-    drawUnits();
+
+    if(player){
+        drawPlayerSprite(player.x*TILE,player.y*TILE,player.color);
+    }
+
+    if(enemy.hp>0){
+        drawEnemySprite(enemy.x*TILE,enemy.y*TILE);
+    }
 }
 
-render();
-
 </script>
-
 </body>
 </html>
